@@ -1,9 +1,11 @@
 {
   "name": "cltw",
   "version": "1.0.0",
-  "description": "",
+  "description": "cltw",
   "main": "index.js",
   "scripts": {
+    "psc-package": "psc-package",
+    "purs": "purs",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
