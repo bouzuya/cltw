@@ -27,6 +27,7 @@
     "build": "psc-package sources | xargs purs compile src/Main.purs",
     "psc-package": "psc-package",
     "purs": "purs",
+    "start": "node -e 'require(\"./output/Main/index.js\").main();'",
     "test": "echo \"Error: no test specified\" && exit 1"
   }
 }
