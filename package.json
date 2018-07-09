@@ -1,15 +1,28 @@
 {
   "name": "cltw",
   "description": "cltw",
-  "version": "1.0.0",
-  "author": "bouzuya <m@bouzuya.net> (http://bouzuya.net/)",
-  "devDependencies": {
+  "version": "0.0.0",
+  "author": {
+    "email": "m@bouzuya.net",
+    "name": "bouzuya",
+    "url": "https://bouzuya.net/"
+  },
+  "bugs": {
+    "url": "https://github.com/bouzuya/cltw/issues"
+  },
+  "dependencies": {
     "psc-package": "^0.3.2",
     "purescript": "^0.12.0"
   },
+  "devDependencies": {},
+  "homepage": "https://github.com/bouzuya/cltw#readme",
   "keywords": [],
   "license": "MIT",
   "main": "index.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bouzuya/cltw.git"
+  },
   "scripts": {
     "build": "psc-package sources | xargs purs compile src/Main.purs",
     "psc-package": "psc-package",
