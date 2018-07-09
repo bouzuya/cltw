@@ -11,6 +11,7 @@
   "license": "MIT",
   "main": "index.js",
   "scripts": {
+    "build": "psc-package sources | xargs purs compile src/Main.purs",
     "psc-package": "psc-package",
     "purs": "purs",
     "test": "echo \"Error: no test specified\" && exit 1"
