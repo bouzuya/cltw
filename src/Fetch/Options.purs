@@ -10,10 +10,10 @@ module Fetch.Options
 -- TODO
 -- import Bouzuya.HTTP.Method (Method)
 -- import Bouzuya.HTTP.Method as Method
-import Data.Functor.Contravariant (cmap)
+-- import Data.Functor.Contravariant (cmap)
 import Data.Options (Option, Options, defaultToOptions, opt)
 import Foreign.Object (Object)
-import Prelude (show)
+-- import Prelude (show)
 
 data FetchOptions
 
@@ -27,7 +27,8 @@ headers :: Option FetchOptions (Object String)
 headers = opt "headers"
 
 method :: Option FetchOptions String -- Method
-method = cmap show (opt "method")
+-- method = cmap show (opt "method")
+method = opt "method"
 
 url :: Option FetchOptions String
 url = opt "url"
