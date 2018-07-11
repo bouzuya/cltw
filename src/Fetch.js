@@ -5,7 +5,7 @@ exports.fetchImpl = function (options) {
     return require('axios')({
       data: options.body,
       headers: options.headers,
-      method: options.method,
+      method: options.method.toLowerCase(),
       responseType: 'text',
       url: options.url
     });
