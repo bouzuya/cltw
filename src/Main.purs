@@ -18,6 +18,8 @@ main = do
       fetch
         ( defaults
         <> method := "GET"
-        <> url := "https://bouzuya.net"
+        <> url := "https://api.github.com/users/bouzuya/repos?type=owner&sort=pushed&direction=desc&per_page=100"
         )
-    liftEffect (logShow response.status)
+    _ <- liftEffect (logShow response.status)
+    _ <- liftEffect (logShow response.body)
+    liftEffect (log "OK")
