@@ -14,7 +14,9 @@ exports.fetchImpl = function (options) {
 };
 
 exports.textImpl = function (response) {
-  return response.data;
+  return typeof response.data !== 'string'
+    ? JSON.stringify(response.data)
+    : response.data;
 };
 
 exports.statusImpl = function (response) {
