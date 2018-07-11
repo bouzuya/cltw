@@ -5,6 +5,7 @@ exports.fetchImpl = function (options) {
     return require('axios')({
       data: options.body,
       headers: options.headers,
+      maxContentLength: 1000000,
       method: options.method.toLowerCase(),
       responseType: 'text',
       url: options.url
