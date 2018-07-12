@@ -11,15 +11,13 @@ import Fetch.Options (defaults, method, url)
 import Prelude (Unit, bind, (<>))
 
 main :: Effect Unit
-main = do
-  _ <- log "Hello"
-  launchAff_ do
-    response <-
-      fetch
-        ( defaults
-        <> method := "GET"
-        <> url := "https://api.github.com/users/bouzuya/repos?type=owner&sort=pushed&direction=desc&per_page=100"
-        )
-    _ <- liftEffect (logShow response.status)
-    _ <- liftEffect (logShow response.body)
-    liftEffect (log "OK")
+main = launchAff_ do
+  response <-
+    fetch
+      ( defaults
+      <> method := "GET"
+      <> url := "https://api.github.com/users/bouzuya/repos?type=owner&sort=pushed&direction=desc&per_page=100"
+      )
+  _ <- liftEffect (logShow response.status)
+  _ <- liftEffect (logShow response.body)
+  liftEffect (log "OK")
