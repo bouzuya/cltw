@@ -6,19 +6,20 @@ import Data.Argonaut.Core as Json
 import Data.Argonaut.Parser (jsonParser)
 import Data.Array as Array
 import Data.Either (either)
-import Data.Maybe (Maybe(..))
+import Data.Maybe (Maybe(..), fromMaybe, maybe)
 import Data.Options ((:=))
 import Data.Traversable (traverse)
 import Effect (Effect)
-import Effect.Aff (Aff, launchAff_)
+import Effect.Aff (Aff, error, launchAff_)
 import Effect.Class (liftEffect)
 import Effect.Class.Console (log)
 import Effect.Console (logShow)
+import Effect.Exception (throw)
 import Fetch (fetch)
 import Fetch.Options (defaults, method, url)
 import Foreign.Object (Object)
 import Foreign.Object as Object
-import Prelude (Unit, bind, compose, const, join, map, pure, (<>))
+import Prelude (Unit, bind, compose, const, join, map, pure, (<>), (>))
 
 fetchRepos :: Aff (Maybe (Array { fullName :: String, pushedAt :: String }))
 fetchRepos = do
@@ -50,6 +51,9 @@ fetchRepos = do
 
 main :: Effect Unit
 main = launchAff_ do
-  repos <- fetchRepos
-  _ <- liftEffect (traverse logShow repos)
+  reposMaybe <- fetchRepos
+  repos <- liftEffect (maybe (throw "no repos") pure reposMaybe)
+  let date = "2018-06-01T00:00:00Z" -- TODO
+  let filteredRepos = Array.filter (\{ pushedAt } -> pushedAt > date) repos
+  _ <- liftEffect (traverse logShow filteredRepos)
   liftEffect (log "OK")
