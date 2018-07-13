@@ -49,6 +49,16 @@ fetchRepos = do
     repoRecords = map f repoObjects
   pure repoRecords
 
+fetchCommits :: String -> Aff (Maybe String)
+fetchCommits fullName = do
+  response <-
+    fetch
+      ( defaults
+      <> method := "GET"
+      <> url := ("https://api.github.com/users/" <> fullName <> "/commits")
+      )
+  pure response.body
+
 main :: Effect Unit
 main = launchAff_ do
   reposMaybe <- fetchRepos
