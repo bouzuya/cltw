@@ -49,7 +49,7 @@ fetchRepos = do
     repoRecords = map f repoObjects
   pure repoRecords
 
-fetchCommits :: String -> Aff (Maybe String)
+fetchCommits :: String -> Aff (Maybe (Array Json))
 fetchCommits fullName = do
   response <-
     fetch
@@ -57,7 +57,14 @@ fetchCommits fullName = do
       <> method := "GET"
       <> url := ("https://api.github.com/users/" <> fullName <> "/commits")
       )
-  pure response.body
+  let
+    toJson :: String -> Maybe Json
+    toJson = compose (either (const Nothing) Just) jsonParser
+    json :: Maybe Json
+    json = join (map toJson response.body)
+    commitJsons :: Maybe (Array Json)
+    commitJsons = join (map Json.toArray json)
+  pure commitJsons
 
 main :: Effect Unit
 main = launchAff_ do
