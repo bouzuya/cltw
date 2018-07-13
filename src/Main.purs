@@ -13,6 +13,7 @@ import Effect (Effect)
 import Effect.Aff (Aff, launchAff_)
 import Effect.Class (liftEffect)
 import Effect.Class.Console (log)
+import Effect.Console (logShow)
 import Fetch (fetch)
 import Fetch.Options (defaults, method, url)
 import Foreign.Object (Object)
@@ -49,5 +50,6 @@ fetchRepos = do
 
 main :: Effect Unit
 main = launchAff_ do
-  _ <- fetchRepos -- TODO
+  repos <- fetchRepos
+  _ <- liftEffect (traverse logShow repos)
   liftEffect (log "OK")
