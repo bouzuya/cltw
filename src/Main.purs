@@ -84,22 +84,25 @@ parseCommits responseBody =
   in
     bind (toJson responseBody) toStrings
 
-main :: Effect Unit
-main = launchAff_ do
+fetchFilteredRepos :: String -> Aff (Array Repo)
+fetchFilteredRepos date = do
   reposMaybe <- (map (compose join (map parseRepos)) fetchRepos)
   repos <- liftEffect (maybe (throw "no repos") pure reposMaybe)
-  let
-    date = "2018-06-01T00:00:00Z" -- TODO
-    filteredRepos = Array.filter (\{ pushedAt } -> pushedAt > date) repos
-    fetchCount :: Repo -> Aff RepoWithCount
-    fetchCount repo = do
-      commitsMaybe <- (map (compose join (map parseCommits))) (fetchCommits repo.fullName)
-      commits <- liftEffect (maybe (throw "no commits") pure commitsMaybe)
-      pure
-        { count: Array.length (Array.filter (lessThan date) commits)
-        , fullName: repo.fullName
-        , pushedAt: repo.pushedAt
-        }
-  repoWithCounts <- traverse fetchCount filteredRepos
-  _ <- liftEffect (logShow repoWithCounts)
-  liftEffect (log "OK")
+  pure (Array.filter (\{ pushedAt } -> pushedAt > date) repos)
+
+fetchFilteredCount :: String -> Repo -> Aff RepoWithCount
+fetchFilteredCount date repo = do
+  commitsMaybe <- (map (compose join (map parseCommits))) (fetchCommits repo.fullName)
+  commits <- liftEffect (maybe (throw "no commits") pure commitsMaybe)
+  pure
+    { count: Array.length (Array.filter (lessThan date) commits)
+    , fullName: repo.fullName
+    , pushedAt: repo.pushedAt
+    }
+
+main :: Effect Unit
+main = launchAff_ do
+  let date = "2018-06-01T00:00:00Z" -- TODO
+  filteredRepos <- fetchFilteredRepos date
+  filteredCounts <- traverse (fetchFilteredCount date) filteredRepos
+  liftEffect (logShow filteredCounts)
