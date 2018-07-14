@@ -25,7 +25,7 @@
     "url": "git+https://github.com/bouzuya/cltw.git"
   },
   "scripts": {
-    "build": "psc-package sources | xargs purs compile src/**/*.purs",
+    "build": "psc-package sources | xargs purs compile 'src/**/*.purs'",
     "psc-package": "psc-package",
     "purs": "purs",
     "start": "node -e 'require(\"./output/Main/index.js\").main();'",
