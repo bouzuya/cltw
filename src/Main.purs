@@ -156,10 +156,14 @@ toDateString date =
 getDateTimeString :: Effect String
 getDateTimeString = map toDateString nowDate
 
+getCommitCount :: String -> Aff Int
+getCommitCount dateTimeString = do
+  filteredRepos <- fetchFilteredRepos dateTimeString
+  filteredCounts <- traverse (fetchFilteredCount dateTimeString) filteredRepos
+  pure (foldl add 0 (map _.count filteredCounts))
+
 main :: Effect Unit
 main = launchAff_ do
   dateTimeString <- liftEffect getDateTimeString
-  filteredRepos <- fetchFilteredRepos dateTimeString
-  filteredCounts <- traverse (fetchFilteredCount dateTimeString) filteredRepos
-  let total = foldl add 0 (map _.count filteredCounts)
+  total <- getCommitCount dateTimeString
   liftEffect (logShow total)
