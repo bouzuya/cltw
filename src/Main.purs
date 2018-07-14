@@ -5,21 +5,29 @@ import Data.Argonaut.Core (Json)
 import Data.Argonaut.Core as Json
 import Data.Argonaut.Parser (jsonParser)
 import Data.Array as Array
+import Data.Date (Date)
+import Data.DateTime (DateTime(..))
 import Data.Either (Either, either)
-import Data.Maybe (Maybe(..), maybe)
+import Data.Enum (toEnum)
+import Data.Formatter.DateTime (format)
+import Data.Formatter.DateTime as Formatter
+import Data.List as List
+import Data.Maybe (Maybe(..), fromJust, maybe)
 import Data.Options ((:=))
 import Data.Ord (lessThan)
+import Data.Time (Time(..))
 import Data.Traversable (traverse)
 import Effect (Effect)
 import Effect.Aff (Aff, launchAff_)
 import Effect.Class (liftEffect)
-import Effect.Class.Console (log)
 import Effect.Console (logShow)
 import Effect.Exception (throw)
+import Effect.Now (nowDate)
 import Fetch (fetch)
 import Fetch.Options (defaults, method, url)
 import Foreign.Object (Object)
 import Foreign.Object as Object
+import Partial.Unsafe (unsafePartial)
 import Prelude (Unit, bind, compose, const, join, map, pure, (<>), (>))
 
 type Repo = { fullName :: String, pushedAt :: String }
@@ -100,9 +108,44 @@ fetchFilteredCount date repo = do
     , pushedAt: repo.pushedAt
     }
 
+unsafeTime :: Time
+unsafeTime = unsafePartial fromJust do
+  hour <- toEnum 0
+  minute <- toEnum 0
+  second <- toEnum 0
+  millisecond <- toEnum 0
+  pure (Time hour minute second millisecond)
+
+toDateString :: Date -> String
+toDateString date =
+  let
+    time = unsafeTime
+    dateTime = DateTime date time
+  in
+    format
+      ( List.fromFoldable
+        [ Formatter.YearFull
+        , Formatter.Placeholder "-"
+        , Formatter.MonthTwoDigits
+        , Formatter.Placeholder "-"
+        , Formatter.DayOfMonthTwoDigits
+        , Formatter.Placeholder "T"
+        , Formatter.Hours24
+        , Formatter.Placeholder ":"
+        , Formatter.MinutesTwoDigits
+        , Formatter.Placeholder ":"
+        , Formatter.SecondsTwoDigits
+        , Formatter.Placeholder "Z"
+        ]
+      )
+      dateTime
+
+getDateTimeString :: Effect String
+getDateTimeString = map toDateString nowDate
+
 main :: Effect Unit
 main = launchAff_ do
-  let date = "2018-06-01T00:00:00Z" -- TODO
-  filteredRepos <- fetchFilteredRepos date
-  filteredCounts <- traverse (fetchFilteredCount date) filteredRepos
+  dateTimeString <- liftEffect getDateTimeString
+  filteredRepos <- fetchFilteredRepos dateTimeString
+  filteredCounts <- traverse (fetchFilteredCount dateTimeString) filteredRepos
   liftEffect (logShow filteredCounts)

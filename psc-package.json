@@ -1,8 +1,10 @@
 {
   "name": "cltw",
-  "set": "psc-0.12.0",
+  "set": "psc-0.12.0-20180704",
   "source": "https://github.com/purescript/package-sets.git",
   "depends": [
+    "formatters",
+    "now",
     "argonaut-core",
     "psci-support",
     "options",
