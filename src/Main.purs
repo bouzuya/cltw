@@ -22,6 +22,9 @@ import Foreign.Object (Object)
 import Foreign.Object as Object
 import Prelude (Unit, bind, compose, const, join, map, pure, (<>), (>))
 
+type Repo = { fullName :: String, pushedAt :: String }
+type RepoWithCount = { count :: Int, fullName :: String, pushedAt :: String }
+
 fetchRepos :: Aff (Maybe String)
 fetchRepos = do
   response <- fetch
@@ -31,19 +34,19 @@ fetchRepos = do
     )
   pure response.body
 
-parseRepos :: String -> Maybe (Array { fullName :: String, pushedAt :: String })
+parseRepos :: String -> Maybe (Array Repo)
 parseRepos responseBody =
   let
     maybeFromEither :: forall a b. Either a b -> Maybe b
     maybeFromEither = either (const Nothing) Just
     toJson :: String -> Maybe Json
     toJson = compose maybeFromEither jsonParser
-    toRecords :: Json -> Maybe (Array { fullName :: String, pushedAt :: String })
+    toRecords :: Json -> Maybe (Array Repo)
     toRecords json = do
       array <- Json.toArray json
       objects <- traverse Json.toObject array
       pure (Array.catMaybes (map toRecord objects))
-    toRecord :: Object Json -> Maybe { fullName :: String, pushedAt :: String }
+    toRecord :: Object Json -> Maybe Repo
     toRecord o = do
       fullName <- bind (Object.lookup "full_name" o) Json.toString
       pushedAt <- bind (Object.lookup "pushed_at" o) Json.toString
@@ -85,13 +88,18 @@ main :: Effect Unit
 main = launchAff_ do
   reposMaybe <- (map (compose join (map parseRepos)) fetchRepos)
   repos <- liftEffect (maybe (throw "no repos") pure reposMaybe)
-  let date = "2018-06-01T00:00:00Z" -- TODO
-  let filteredRepos = Array.filter (\{ pushedAt } -> pushedAt > date) repos
-  _ <- liftEffect (traverse logShow filteredRepos)
-  repo <- liftEffect (maybe (throw "no repo") pure (Array.head filteredRepos))
-  commitsMaybe <- (map (compose join (map parseCommits))) (fetchCommits repo.fullName)
-  commits <- liftEffect (maybe (throw "no commits") pure commitsMaybe)
-  _ <- liftEffect (logShow (Array.length commits))
-  let filteredCommits = Array.filter (lessThan date) commits
-  _ <- liftEffect (logShow (Array.length filteredCommits))
+  let
+    date = "2018-06-01T00:00:00Z" -- TODO
+    filteredRepos = Array.filter (\{ pushedAt } -> pushedAt > date) repos
+    fetchCount :: Repo -> Aff RepoWithCount
+    fetchCount repo = do
+      commitsMaybe <- (map (compose join (map parseCommits))) (fetchCommits repo.fullName)
+      commits <- liftEffect (maybe (throw "no commits") pure commitsMaybe)
+      pure
+        { count: Array.length (Array.filter (lessThan date) commits)
+        , fullName: repo.fullName
+        , pushedAt: repo.pushedAt
+        }
+  repoWithCounts <- traverse fetchCount filteredRepos
+  _ <- liftEffect (logShow repoWithCounts)
   liftEffect (log "OK")
