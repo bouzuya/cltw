@@ -50,7 +50,7 @@ parseRepos responseBody =
   in
     bind (toJson responseBody) toRecords
 
-fetchCommits :: String -> Aff (Maybe (Array Json))
+fetchCommits :: String -> Aff (Maybe String)
 fetchCommits fullName = do
   response <-
     fetch
@@ -58,14 +58,27 @@ fetchCommits fullName = do
       <> method := "GET"
       <> url := ("https://api.github.com/repos/" <> fullName <> "/commits")
       )
+  pure response.body
+
+parseCommits :: String -> Maybe (Array String)
+parseCommits responseBody =
   let
+    maybeFromEither :: forall a b. Either a b -> Maybe b
+    maybeFromEither = either (const Nothing) Just
     toJson :: String -> Maybe Json
-    toJson = compose (either (const Nothing) Just) jsonParser
-    json :: Maybe Json
-    json = join (map toJson response.body)
-    commitJsons :: Maybe (Array Json)
-    commitJsons = join (map Json.toArray json)
-  pure commitJsons
+    toJson = compose maybeFromEither jsonParser
+    toStrings :: Json -> Maybe (Array String)
+    toStrings json = do
+      array <- Json.toArray json
+      objects <- traverse Json.toObject array
+      pure (Array.catMaybes (map toString objects))
+    toString :: Object Json -> Maybe String
+    toString o = do
+      commit <- bind (Object.lookup "commit" o) Json.toObject
+      author <- bind (Object.lookup "author" commit) Json.toObject
+      bind (Object.lookup "date" author) Json.toString
+  in
+    bind (toJson responseBody) toStrings
 
 main :: Effect Unit
 main = launchAff_ do
@@ -75,7 +88,7 @@ main = launchAff_ do
   let filteredRepos = Array.filter (\{ pushedAt } -> pushedAt > date) repos
   _ <- liftEffect (traverse logShow filteredRepos)
   repo <- liftEffect (maybe (throw "no repo") pure (Array.head filteredRepos))
-  commitsMaybe <- fetchCommits repo.fullName
+  commitsMaybe <- (map (compose join (map parseCommits))) (fetchCommits repo.fullName)
   commits <- liftEffect (maybe (throw "no commits") pure commitsMaybe)
   _ <- liftEffect (logShow (Array.length commits))
   liftEffect (log "OK")
