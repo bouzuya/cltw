@@ -8,6 +8,7 @@ import Data.Array as Array
 import Data.Either (Either, either)
 import Data.Maybe (Maybe(..), maybe)
 import Data.Options ((:=))
+import Data.Ord (lessThan)
 import Data.Traversable (traverse)
 import Effect (Effect)
 import Effect.Aff (Aff, launchAff_)
@@ -56,7 +57,7 @@ fetchCommits fullName = do
     fetch
       ( defaults
       <> method := "GET"
-      <> url := ("https://api.github.com/repos/" <> fullName <> "/commits")
+      <> url := ("https://api.github.com/repos/" <> fullName <> "/commits?per_page=100")
       )
   pure response.body
 
@@ -91,4 +92,6 @@ main = launchAff_ do
   commitsMaybe <- (map (compose join (map parseCommits))) (fetchCommits repo.fullName)
   commits <- liftEffect (maybe (throw "no commits") pure commitsMaybe)
   _ <- liftEffect (logShow (Array.length commits))
+  let filteredCommits = Array.filter (lessThan date) commits
+  _ <- liftEffect (logShow (Array.length filteredCommits))
   liftEffect (log "OK")
