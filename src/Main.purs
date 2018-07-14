@@ -4,6 +4,7 @@ module Main
 import Data.Argonaut.Core (Json)
 import Data.Argonaut.Core as Json
 import Data.Argonaut.Parser (jsonParser)
+import Data.Array (foldl)
 import Data.Array as Array
 import Data.Date (Date)
 import Data.DateTime (DateTime(..))
@@ -28,7 +29,7 @@ import Fetch.Options (defaults, method, url)
 import Foreign.Object (Object)
 import Foreign.Object as Object
 import Partial.Unsafe (unsafePartial)
-import Prelude (Unit, bind, compose, const, join, map, pure, (&&), (<>), (==), (>))
+import Prelude (Unit, add, bind, compose, const, join, map, pure, (&&), (<>), (==), (>))
 
 type Repo =
   { fullName :: String
@@ -160,4 +161,5 @@ main = launchAff_ do
   dateTimeString <- liftEffect getDateTimeString
   filteredRepos <- fetchFilteredRepos dateTimeString
   filteredCounts <- traverse (fetchFilteredCount dateTimeString) filteredRepos
-  liftEffect (logShow filteredCounts)
+  let total = foldl add 0 (map _.count filteredCounts)
+  liftEffect (logShow total)
