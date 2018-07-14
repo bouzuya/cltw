@@ -6,11 +6,11 @@ import Data.Argonaut.Core as Json
 import Data.Argonaut.Parser (jsonParser)
 import Data.Array as Array
 import Data.Either (either)
-import Data.Maybe (Maybe(..), fromMaybe, maybe)
+import Data.Maybe (Maybe(..), maybe)
 import Data.Options ((:=))
 import Data.Traversable (traverse)
 import Effect (Effect)
-import Effect.Aff (Aff, error, launchAff_)
+import Effect.Aff (Aff, launchAff_)
 import Effect.Class (liftEffect)
 import Effect.Class.Console (log)
 import Effect.Console (logShow)
@@ -55,7 +55,7 @@ fetchCommits fullName = do
     fetch
       ( defaults
       <> method := "GET"
-      <> url := ("https://api.github.com/users/" <> fullName <> "/commits")
+      <> url := ("https://api.github.com/repos/" <> fullName <> "/commits")
       )
   let
     toJson :: String -> Maybe Json
@@ -73,4 +73,8 @@ main = launchAff_ do
   let date = "2018-06-01T00:00:00Z" -- TODO
   let filteredRepos = Array.filter (\{ pushedAt } -> pushedAt > date) repos
   _ <- liftEffect (traverse logShow filteredRepos)
+  repo <- liftEffect (maybe (throw "no repo") pure (Array.head filteredRepos))
+  commitsMaybe <- fetchCommits repo.fullName
+  commits <- liftEffect (maybe (throw "no commits") pure commitsMaybe)
+  _ <- liftEffect (logShow (Array.length commits))
   liftEffect (log "OK")
