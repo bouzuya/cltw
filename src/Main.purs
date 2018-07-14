@@ -28,10 +28,19 @@ import Fetch.Options (defaults, method, url)
 import Foreign.Object (Object)
 import Foreign.Object as Object
 import Partial.Unsafe (unsafePartial)
-import Prelude (Unit, bind, compose, const, join, map, pure, (<>), (>))
+import Prelude (Unit, bind, compose, const, join, map, pure, (&&), (<>), (==), (>))
 
-type Repo = { fullName :: String, pushedAt :: String }
-type RepoWithCount = { count :: Int, fullName :: String, pushedAt :: String }
+type Repo =
+  { fullName :: String
+  , language :: String
+  , pushedAt :: String
+  }
+type RepoWithCount =
+  { count :: Int
+  , fullName :: String
+  , language :: String
+  , pushedAt :: String
+  }
 
 fetchRepos :: Aff (Maybe String)
 fetchRepos = do
@@ -57,8 +66,9 @@ parseRepos responseBody =
     toRecord :: Object Json -> Maybe Repo
     toRecord o = do
       fullName <- bind (Object.lookup "full_name" o) Json.toString
+      language <- bind (Object.lookup "language" o) Json.toString
       pushedAt <- bind (Object.lookup "pushed_at" o) Json.toString
-      pure { fullName, pushedAt }
+      pure { fullName, language, pushedAt }
   in
     bind (toJson responseBody) toRecords
 
@@ -96,7 +106,8 @@ fetchFilteredRepos :: String -> Aff (Array Repo)
 fetchFilteredRepos date = do
   reposMaybe <- (map (compose join (map parseRepos)) fetchRepos)
   repos <- liftEffect (maybe (throw "no repos") pure reposMaybe)
-  pure (Array.filter (\{ pushedAt } -> pushedAt > date) repos)
+  let filter { language, pushedAt } = pushedAt > date && language == "PureScript"
+  pure (Array.filter filter repos)
 
 fetchFilteredCount :: String -> Repo -> Aff RepoWithCount
 fetchFilteredCount date repo = do
@@ -105,6 +116,7 @@ fetchFilteredCount date repo = do
   pure
     { count: Array.length (Array.filter (lessThan date) commits)
     , fullName: repo.fullName
+    , language: repo.language
     , pushedAt: repo.pushedAt
     }
 
