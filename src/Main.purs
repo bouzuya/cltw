@@ -8,8 +8,8 @@ import Data.Array (foldl)
 import Data.Array as Array
 import Data.Date (Date)
 import Data.DateTime (DateTime(..))
+import Data.DateTime as DateTime
 import Data.Either (Either, either)
-import Data.Enum (toEnum)
 import Data.Formatter.DateTime (format)
 import Data.Formatter.DateTime as Formatter
 import Data.List as List
@@ -17,6 +17,7 @@ import Data.Maybe (Maybe(..), fromJust, maybe)
 import Data.Options ((:=))
 import Data.Ord (lessThan)
 import Data.Time (Time(..))
+import Data.Time.Duration (Minutes(..))
 import Data.Traversable (traverse)
 import Effect (Effect)
 import Effect.Aff (Aff, launchAff_)
@@ -29,7 +30,7 @@ import Fetch.Options (defaults, method, url)
 import Foreign.Object (Object)
 import Foreign.Object as Object
 import Partial.Unsafe (unsafePartial)
-import Prelude (Unit, add, bind, compose, const, join, map, pure, (&&), (<>), (==), (>))
+import Prelude (Unit, add, bind, bottom, compose, const, join, map, negate, pure, (&&), (*), (<>), (==), (>))
 
 type Repo =
   { fullName :: String
@@ -121,19 +122,16 @@ fetchFilteredCount date repo = do
     , pushedAt: repo.pushedAt
     }
 
-unsafeTime :: Time
-unsafeTime = unsafePartial fromJust do
-  hour <- toEnum 0
-  minute <- toEnum 0
-  second <- toEnum 0
-  millisecond <- toEnum 0
-  pure (Time hour minute second millisecond)
+beginningOfDay :: Time
+beginningOfDay = Time bottom bottom bottom bottom
 
 toDateString :: Date -> String
 toDateString date =
   let
-    time = unsafeTime
-    dateTime = DateTime date time
+    time = beginningOfDay
+    localDateTime = DateTime date time
+    utcDateTimeMaybe = DateTime.adjust (Minutes (negate (60.0 * 9.0))) localDateTime
+    utcDateTime = unsafePartial (fromJust utcDateTimeMaybe)
   in
     format
       ( List.fromFoldable
@@ -151,7 +149,7 @@ toDateString date =
         , Formatter.Placeholder "Z"
         ]
       )
-      dateTime
+      utcDateTime
 
 getDateTimeString :: Effect String
 getDateTimeString = map toDateString nowDate
