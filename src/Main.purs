@@ -161,8 +161,14 @@ getCommitCount dateTimeString = do
   filteredCounts <- traverse (fetchFilteredCount dateTimeString) filteredRepos
   pure (foldl add 0 (map _.count filteredCounts))
 
+getTweetCount :: String -> Aff Int
+getTweetCount dateTimeString = do
+  pure 0 -- TODO
+
 main :: Effect Unit
 main = launchAff_ do
   dateTimeString <- liftEffect getDateTimeString
-  total <- getCommitCount dateTimeString
-  liftEffect (logShow total)
+  commitCount <- getCommitCount dateTimeString
+  liftEffect (logShow commitCount)
+  tweetCount <- getTweetCount dateTimeString
+  liftEffect (logShow tweetCount)
