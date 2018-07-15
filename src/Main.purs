@@ -130,7 +130,8 @@ toDateString date =
   let
     time = beginningOfDay
     localDateTime = DateTime date time
-    utcDateTimeMaybe = DateTime.adjust (Minutes (negate (60.0 * 9.0))) localDateTime
+    jstOffset = Minutes (negate (60.0 * 9.0))
+    utcDateTimeMaybe = DateTime.adjust jstOffset localDateTime
     utcDateTime = unsafePartial (fromJust utcDateTimeMaybe)
   in
     format
