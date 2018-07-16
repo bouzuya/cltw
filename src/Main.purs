@@ -16,6 +16,7 @@ import Data.Ord (lessThan)
 import Data.Time (Time(..))
 import Data.Time.Duration (Minutes(..))
 import Data.Traversable (traverse)
+import Data.Tuple (Tuple(..))
 import DateTimeFormat (format, iso8601DateTimeFormatWithoutMilliseconds)
 import Effect (Effect)
 import Effect.Aff (Aff, launchAff_)
@@ -24,7 +25,7 @@ import Effect.Console (logShow)
 import Effect.Exception (throw)
 import Effect.Now (nowDate)
 import Fetch (fetch)
-import Fetch.Options (defaults, method, url)
+import Fetch.Options (defaults, headers, method, url)
 import Foreign.Object (Object)
 import Foreign.Object as Object
 import Partial.Unsafe (unsafePartial)
@@ -143,9 +144,28 @@ getCommitCount dateTimeString = do
   filteredCounts <- traverse (fetchFilteredCount dateTimeString) filteredRepos
   pure (foldl add 0 (map _.count filteredCounts))
 
+base64header :: String -> String -> Tuple String String
+base64header userName password =
+  let
+    encodeBase64 s = s -- FIXME
+  in
+    Tuple
+      "Authorization"
+      ("Basic " <> encodeBase64 (userName <> ":" <> password))
+
+-- https://developer.twitter.com/en/docs/basics/authentication/overview/application-only
 getTweetCount :: String -> Aff Int
 getTweetCount dateTimeString = do
-  pure 0 -- TODO
+  let
+    consumerKey = "consumer_key" -- FIXME
+    consumerSecret = "consumer_secret" -- FIXME
+  response <- fetch
+    ( defaults
+    <> headers := (Object.fromFoldable [base64header consumerKey consumerSecret])
+    <> method := "POST"
+    <> url := "https://api.twitter.com/oauth2/token"
+    )
+  pure 0
 
 main :: Effect Unit
 main = launchAff_ do
