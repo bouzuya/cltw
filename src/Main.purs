@@ -125,6 +125,23 @@ fetchFilteredCount date repo = do
 beginningOfDay :: Time
 beginningOfDay = Time bottom bottom bottom bottom
 
+iso8601DateTimeFormatWithoutMilliseconds :: Formatter.Formatter
+iso8601DateTimeFormatWithoutMilliseconds =
+  List.fromFoldable
+  [ Formatter.YearFull
+  , Formatter.Placeholder "-"
+  , Formatter.MonthTwoDigits
+  , Formatter.Placeholder "-"
+  , Formatter.DayOfMonthTwoDigits
+  , Formatter.Placeholder "T"
+  , Formatter.Hours24
+  , Formatter.Placeholder ":"
+  , Formatter.MinutesTwoDigits
+  , Formatter.Placeholder ":"
+  , Formatter.SecondsTwoDigits
+  , Formatter.Placeholder "Z"
+  ]
+
 toDateString :: Date -> String
 toDateString date =
   let
@@ -134,23 +151,7 @@ toDateString date =
     utcDateTimeMaybe = DateTime.adjust jstOffset localDateTime
     utcDateTime = unsafePartial (fromJust utcDateTimeMaybe)
   in
-    format
-      ( List.fromFoldable
-        [ Formatter.YearFull
-        , Formatter.Placeholder "-"
-        , Formatter.MonthTwoDigits
-        , Formatter.Placeholder "-"
-        , Formatter.DayOfMonthTwoDigits
-        , Formatter.Placeholder "T"
-        , Formatter.Hours24
-        , Formatter.Placeholder ":"
-        , Formatter.MinutesTwoDigits
-        , Formatter.Placeholder ":"
-        , Formatter.SecondsTwoDigits
-        , Formatter.Placeholder "Z"
-        ]
-      )
-      utcDateTime
+    format iso8601DateTimeFormatWithoutMilliseconds utcDateTime
 
 getDateTimeString :: Effect String
 getDateTimeString = map toDateString nowDate
@@ -160,6 +161,28 @@ getCommitCount dateTimeString = do
   filteredRepos <- fetchFilteredRepos dateTimeString
   filteredCounts <- traverse (fetchFilteredCount dateTimeString) filteredRepos
   pure (foldl add 0 (map _.count filteredCounts))
+
+-- Twitter Timestamp format
+-- e.g. Sun Jan 01 00:00:00 +0000 2018
+-- NOTE: ANSI C's asctime() format (`Sun Jan 01 00:00:00 2018`)
+-- https://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.3
+ansiCAsctimeFormat :: Formatter.Formatter
+ansiCAsctimeFormat =
+  List.fromFoldable
+  [ Formatter.DayOfWeekNameShort
+  , Formatter.Placeholder " "
+  , Formatter.MonthShort
+  , Formatter.Placeholder " "
+  , Formatter.DayOfMonthTwoDigits
+  , Formatter.Placeholder " "
+  , Formatter.Hours24
+  , Formatter.Placeholder ":"
+  , Formatter.MinutesTwoDigits
+  , Formatter.Placeholder ":"
+  , Formatter.SecondsTwoDigits
+  , Formatter.Placeholder " +0000 "
+  , Formatter.YearFull
+  ]
 
 getTweetCount :: String -> Aff Int
 getTweetCount dateTimeString = do
