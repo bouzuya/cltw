@@ -165,6 +165,23 @@ fetchTwitterToken consumerKey consumerSecret = do
   pure response.body
 
 type TwitterToken = { tokenType :: String, accessToken :: String }
+
+parseTwitterToken :: String -> Maybe TwitterToken
+parseTwitterToken responseBody =
+  let
+    maybeFromEither :: forall a b. Either a b -> Maybe b
+    maybeFromEither = either (const Nothing) Just
+    toJson :: String -> Maybe Json
+    toJson = compose maybeFromEither jsonParser
+    toRecord :: Json -> Maybe TwitterToken
+    toRecord json = do
+      o <- Json.toObject json
+      accessToken <- bind (Object.lookup "access_token" o) Json.toString
+      tokenType <- bind (Object.lookup "token_type" o) Json.toString
+      pure { accessToken, tokenType }
+  in
+    bind (toJson responseBody) toRecord
+
 -- https://developer.twitter.com/en/docs/basics/authentication/overview/application-only
 getTweetCount :: String -> Aff Int
 getTweetCount dateTimeString = do
