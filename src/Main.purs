@@ -164,6 +164,7 @@ fetchTwitterToken consumerKey consumerSecret = do
     )
   pure response.body
 
+type TwitterToken = { tokenType :: String, accessToken :: String }
 -- https://developer.twitter.com/en/docs/basics/authentication/overview/application-only
 getTweetCount :: String -> Aff Int
 getTweetCount dateTimeString = do
