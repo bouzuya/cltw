@@ -153,12 +153,8 @@ base64header userName password =
       "Authorization"
       ("Basic " <> encodeBase64 (userName <> ":" <> password))
 
--- https://developer.twitter.com/en/docs/basics/authentication/overview/application-only
-getTweetCount :: String -> Aff Int
-getTweetCount dateTimeString = do
-  let
-    consumerKey = "consumer_key" -- FIXME
-    consumerSecret = "consumer_secret" -- FIXME
+fetchTwitterToken :: String -> String -> Aff (Maybe String)
+fetchTwitterToken consumerKey consumerSecret = do
   response <- fetch
     ( defaults
     <> body := "grant_type=client_credentials"
@@ -166,6 +162,15 @@ getTweetCount dateTimeString = do
     <> method := "POST"
     <> url := "https://api.twitter.com/oauth2/token"
     )
+  pure response.body
+
+-- https://developer.twitter.com/en/docs/basics/authentication/overview/application-only
+getTweetCount :: String -> Aff Int
+getTweetCount dateTimeString = do
+  let
+    consumerKey = "consumer_key" -- FIXME
+    consumerSecret = "consumer_secret" -- FIXME
+  _ <- fetchTwitterToken consumerKey consumerSecret
   pure 0
 
 main :: Effect Unit
