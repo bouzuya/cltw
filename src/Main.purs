@@ -188,7 +188,10 @@ getTweetCount dateTimeString = do
   let
     consumerKey = "consumer_key" -- FIXME
     consumerSecret = "consumer_secret" -- FIXME
-  _ <- fetchTwitterToken consumerKey consumerSecret
+  token <-
+    (map
+      (compose join (map parseTwitterToken))
+      (fetchTwitterToken consumerKey consumerSecret))
   pure 0
 
 main :: Effect Unit
