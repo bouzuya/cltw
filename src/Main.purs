@@ -25,7 +25,7 @@ import Effect.Console (logShow)
 import Effect.Exception (throw)
 import Effect.Now (nowDate)
 import Fetch (fetch)
-import Fetch.Options (defaults, headers, method, url)
+import Fetch.Options (body, defaults, headers, method, url)
 import Foreign.Object (Object)
 import Foreign.Object as Object
 import Partial.Unsafe (unsafePartial)
@@ -161,6 +161,7 @@ getTweetCount dateTimeString = do
     consumerSecret = "consumer_secret" -- FIXME
   response <- fetch
     ( defaults
+    <> body := "grant_type=client_credentials"
     <> headers := (Object.fromFoldable [base64header consumerKey consumerSecret])
     <> method := "POST"
     <> url := "https://api.twitter.com/oauth2/token"
