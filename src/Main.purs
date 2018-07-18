@@ -155,8 +155,8 @@ base64header userName password =
       "Authorization"
       ("Basic " <> encodeBase64 (userName <> ":" <> password))
 
-fetchTwitterToken :: String -> String -> Aff (Maybe String)
-fetchTwitterToken consumerKey consumerSecret = do
+fetchTwitterToken :: TwitterCredentials -> Aff (Maybe String)
+fetchTwitterToken { consumerKey, consumerSecret } = do
   response <- fetch
     ( defaults
     <> body := "grant_type=client_credentials"
@@ -199,7 +199,7 @@ getTweetCount dateTimeString = do
   token <-
     (map
       (compose join (map parseTwitterToken))
-      (fetchTwitterToken credentials.consumerKey credentials.consumerSecret))
+      (fetchTwitterToken credentials))
   pure 0
 
 main :: Effect Unit
