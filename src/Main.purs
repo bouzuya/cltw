@@ -206,10 +206,13 @@ getTweetCount :: String -> Aff Int
 getTweetCount dateTimeString = do
   credentialsMaybe <- liftEffect loadCredentials
   credentials <- liftEffect (maybe (throw "no env") pure credentialsMaybe)
-  token <-
+  tokenMaybe <-
     (map
       (compose join (map parseTwitterToken))
       (fetchTwitterToken credentials))
+  token <- liftEffect (maybe (throw "no token") pure tokenMaybe)
+  tweets <- fetchTweets token
+  _ <- liftEffect (logShow tweets)
   pure 0
 
 main :: Effect Unit
