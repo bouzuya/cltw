@@ -1,6 +1,7 @@
 module Main
   (main) where
 
+import Control.Monad.Maybe.Trans (MaybeT(..), runMaybeT)
 import Data.Argonaut.Core (Json)
 import Data.Argonaut.Core as Json
 import Data.Argonaut.Parser (jsonParser)
@@ -28,6 +29,7 @@ import Fetch (fetch)
 import Fetch.Options (body, defaults, headers, method, url)
 import Foreign.Object (Object)
 import Foreign.Object as Object
+import Node.Process as Process
 import Partial.Unsafe (unsafePartial)
 import Prelude (Unit, add, bind, bottom, compose, const, join, map, negate, pure, (&&), (*), (<>), (==), (>))
 
@@ -182,6 +184,12 @@ parseTwitterToken responseBody =
       pure { accessToken, tokenType }
   in
     bind (toJson responseBody) toRecord
+
+loadCredentials :: Effect (Maybe TwitterCredentials)
+loadCredentials = runMaybeT do
+  consumerKey <- MaybeT (Process.lookupEnv "CLTW_TWITTER_CONSUMER_KEY")
+  consumerSecret <- MaybeT (Process.lookupEnv "CLTW_TWITTER_CONSUMER_SECRET")
+  pure { consumerKey, consumerSecret }
 
 -- https://developer.twitter.com/en/docs/basics/authentication/overview/application-only
 getTweetCount :: String -> Aff Int
