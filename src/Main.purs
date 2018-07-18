@@ -164,6 +164,7 @@ fetchTwitterToken consumerKey consumerSecret = do
     )
   pure response.body
 
+type TwitterCredentials = { consumerKey :: String, consumerSecret :: String }
 type TwitterToken = { tokenType :: String, accessToken :: String }
 
 parseTwitterToken :: String -> Maybe TwitterToken
