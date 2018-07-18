@@ -165,6 +165,17 @@ fetchTwitterToken { consumerKey, consumerSecret } = do
     )
   pure response.body
 
+fetchTweets :: TwitterToken -> Aff (Maybe String)
+fetchTweets { accessToken } = do
+  response <- fetch
+    ( defaults
+    <> headers := (Object.fromFoldable
+        [ Tuple "Authorization" ("Bearer " <> accessToken) ])
+    <> method := "GET"
+    <> url := "https://api.twitter.com/1.1/statuses/user_timeline.json?screen_name=bouzuya&count=200&trim_user=true"
+    )
+  pure response.body
+
 type TwitterCredentials = { consumerKey :: String, consumerSecret :: String }
 type TwitterToken = { tokenType :: String, accessToken :: String }
 
