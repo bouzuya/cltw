@@ -31,7 +31,7 @@ import Foreign.Object (Object)
 import Foreign.Object as Object
 import Node.Process as Process
 import Partial.Unsafe (unsafePartial)
-import Prelude (Unit, add, bind, bottom, compose, const, join, map, negate, pure, (&&), (*), (<>), (==), (>))
+import Prelude (Unit, add, bind, bottom, compose, const, identity, join, map, negate, pure, (&&), (*), (<>), (==), (>))
 
 type Repo =
   { fullName :: String
@@ -194,13 +194,12 @@ loadCredentials = runMaybeT do
 -- https://developer.twitter.com/en/docs/basics/authentication/overview/application-only
 getTweetCount :: String -> Aff Int
 getTweetCount dateTimeString = do
-  let
-    consumerKey = "consumer_key" -- FIXME
-    consumerSecret = "consumer_secret" -- FIXME
+  credentialsMaybe <- liftEffect loadCredentials
+  credentials <- liftEffect (maybe (throw "no env") pure credentialsMaybe)
   token <-
     (map
       (compose join (map parseTwitterToken))
-      (fetchTwitterToken consumerKey consumerSecret))
+      (fetchTwitterToken credentials.consumerKey credentials.consumerSecret))
   pure 0
 
 main :: Effect Unit
