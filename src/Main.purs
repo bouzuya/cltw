@@ -33,6 +33,8 @@ import Node.Process as Process
 import Partial.Unsafe (unsafePartial)
 import Prelude (Unit, add, bind, bottom, compose, const, identity, join, map, negate, pure, (&&), (*), (<>), (==), (>))
 
+foreign import encodeBase64 :: String -> String
+
 type Repo =
   { fullName :: String
   , language :: String
@@ -148,12 +150,9 @@ getCommitCount dateTimeString = do
 
 base64header :: String -> String -> Tuple String String
 base64header userName password =
-  let
-    encodeBase64 s = s -- FIXME
-  in
-    Tuple
-      "Authorization"
-      ("Basic " <> encodeBase64 (userName <> ":" <> password))
+  Tuple
+    "Authorization"
+    ("Basic " <> encodeBase64 (userName <> ":" <> password))
 
 fetchTwitterToken :: TwitterCredentials -> Aff (Maybe String)
 fetchTwitterToken { consumerKey, consumerSecret } = do
