@@ -3,6 +3,7 @@ module Main
 
 import Data.DateTime (DateTime(..))
 import Data.DateTime as DateTime
+import Data.Foldable (intercalate)
 import Data.Maybe (fromJust)
 import Data.Time (Time(..))
 import Data.Time.Duration (Minutes(..))
@@ -10,11 +11,11 @@ import DateTimeFormat (format, iso8601DateTimeFormatWithoutMilliseconds)
 import Effect (Effect)
 import Effect.Aff (launchAff_)
 import Effect.Class (liftEffect)
-import Effect.Console (logShow)
+import Effect.Class.Console (log)
 import Effect.Now (nowDate)
 import GitHub (getCommitCount)
 import Partial.Unsafe (unsafePartial)
-import Prelude (Unit, bind, bottom, negate, pure, (*))
+import Prelude (Unit, bind, bottom, negate, pure, show, (*), (<>))
 import Twitter (getTweetCount)
 
 beginningOfDay :: Time
@@ -36,6 +37,11 @@ main = launchAff_ do
   today <- liftEffect getToday
   let dateTimeString = format iso8601DateTimeFormatWithoutMilliseconds today
   commitCount <- getCommitCount dateTimeString
-  _ <- liftEffect (logShow commitCount)
   tweetCount <- getTweetCount today
-  liftEffect (logShow tweetCount)
+  let
+    message =
+      intercalate "\n"
+        [ "Commit Count: " <> (show commitCount)
+        , "Tweet Count : " <> (show tweetCount)
+        ]
+  liftEffect (log message)
