@@ -26,6 +26,7 @@
   },
   "scripts": {
     "build": "psc-package sources | xargs purs compile 'src/**/*.purs'",
+    "postinstall": "psc-package install",
     "psc-package": "psc-package",
     "purs": "purs",
     "start": "node -e 'require(\"./output/Main/index.js\").main();'",
