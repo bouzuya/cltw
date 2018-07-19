@@ -6,7 +6,6 @@ import Data.Argonaut.Core (Json)
 import Data.Argonaut.Core as Json
 import Data.Argonaut.Parser (jsonParser)
 import Data.Array (foldl)
-import Data.Array as Array
 import Data.Either (Either, either)
 import Data.Maybe (Maybe(..), maybe)
 import Data.Options ((:=))
@@ -14,13 +13,16 @@ import Data.Tuple (Tuple(..))
 import Effect (Effect)
 import Effect.Aff (Aff)
 import Effect.Class (liftEffect)
-import Effect.Console (logShow)
 import Effect.Exception (throw)
 import Fetch (fetch)
 import Fetch.Options (body, defaults, headers, method, url)
 import Foreign.Object as Object
 import Node.Process as Process
 import Prelude (add, bind, compose, const, join, map, pure, (<>))
+
+type Tweet = {}
+type TwitterCredentials = { consumerKey :: String, consumerSecret :: String }
+type TwitterToken = { tokenType :: String, accessToken :: String }
 
 foreign import encodeBase64 :: String -> String
 
@@ -29,17 +31,6 @@ base64header userName password =
   Tuple
     "Authorization"
     ("Basic " <> encodeBase64 (userName <> ":" <> password))
-
-fetchTwitterToken :: TwitterCredentials -> Aff (Maybe String)
-fetchTwitterToken { consumerKey, consumerSecret } = do
-  response <- fetch
-    ( defaults
-    <> body := "grant_type=client_credentials"
-    <> headers := (Object.fromFoldable [base64header consumerKey consumerSecret])
-    <> method := "POST"
-    <> url := "https://api.twitter.com/oauth2/token"
-    )
-  pure response.body
 
 fetchTweets :: TwitterToken -> Aff (Maybe String)
 fetchTweets { accessToken } = do
@@ -52,8 +43,39 @@ fetchTweets { accessToken } = do
     )
   pure response.body
 
-type TwitterCredentials = { consumerKey :: String, consumerSecret :: String }
-type TwitterToken = { tokenType :: String, accessToken :: String }
+fetchTwitterToken :: TwitterCredentials -> Aff (Maybe String)
+fetchTwitterToken { consumerKey, consumerSecret } = do
+  response <- fetch
+    ( defaults
+    <> body := "grant_type=client_credentials"
+    <> headers := (Object.fromFoldable [base64header consumerKey consumerSecret])
+    <> method := "POST"
+    <> url := "https://api.twitter.com/oauth2/token"
+    )
+  pure response.body
+
+-- https://developer.twitter.com/en/docs/basics/authentication/overview/application-only
+getTweetCount :: String -> Aff Int
+getTweetCount dateTimeString = do
+  credentialsMaybe <- liftEffect loadCredentials
+  credentials <- liftEffect (maybe (throw "no env") pure credentialsMaybe)
+  tokenMaybe <-
+    (map
+      (compose join (map parseTwitterToken))
+      (fetchTwitterToken credentials))
+  token <- liftEffect (maybe (throw "no token") pure tokenMaybe)
+  tweets <- map (compose join (map parseTweets)) (fetchTweets token)
+  pure (foldl add 0 (map (const 1) tweets))
+
+loadCredentials :: Effect (Maybe TwitterCredentials)
+loadCredentials = runMaybeT do
+  consumerKey <- MaybeT (Process.lookupEnv "CLTW_TWITTER_CONSUMER_KEY")
+  consumerSecret <- MaybeT (Process.lookupEnv "CLTW_TWITTER_CONSUMER_SECRET")
+  pure { consumerKey, consumerSecret }
+
+parseTweets :: String -> Maybe (Array Tweet)
+parseTweets _ = do
+  pure [] -- TODO
 
 parseTwitterToken :: String -> Maybe TwitterToken
 parseTwitterToken responseBody =
@@ -71,27 +93,3 @@ parseTwitterToken responseBody =
   in
     bind (toJson responseBody) toRecord
 
-type Tweet = {}
-
-parseTweets :: String -> Maybe (Array Tweet)
-parseTweets _ = do
-  pure [] -- TODO
-
-loadCredentials :: Effect (Maybe TwitterCredentials)
-loadCredentials = runMaybeT do
-  consumerKey <- MaybeT (Process.lookupEnv "CLTW_TWITTER_CONSUMER_KEY")
-  consumerSecret <- MaybeT (Process.lookupEnv "CLTW_TWITTER_CONSUMER_SECRET")
-  pure { consumerKey, consumerSecret }
-
--- https://developer.twitter.com/en/docs/basics/authentication/overview/application-only
-getTweetCount :: String -> Aff Int
-getTweetCount dateTimeString = do
-  credentialsMaybe <- liftEffect loadCredentials
-  credentials <- liftEffect (maybe (throw "no env") pure credentialsMaybe)
-  tokenMaybe <-
-    (map
-      (compose join (map parseTwitterToken))
-      (fetchTwitterToken credentials))
-  token <- liftEffect (maybe (throw "no token") pure tokenMaybe)
-  tweets <- map (compose join (map parseTweets)) (fetchTweets token)
-  pure (foldl add 0 (map (const 1) tweets))
