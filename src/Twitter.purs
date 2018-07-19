@@ -5,22 +5,26 @@ import Control.Monad.Maybe.Trans (MaybeT(..), runMaybeT)
 import Data.Argonaut.Core (Json)
 import Data.Argonaut.Core as Json
 import Data.Argonaut.Parser (jsonParser)
-import Data.Array (foldl)
+import Data.Array as Array
+import Data.DateTime (DateTime)
 import Data.Either (Either, either)
 import Data.Maybe (Maybe(..), maybe)
 import Data.Options ((:=))
+import Data.Traversable (traverse)
 import Data.Tuple (Tuple(..))
+import DateTimeFormat as DateTimeFormat
 import Effect (Effect)
 import Effect.Aff (Aff)
 import Effect.Class (liftEffect)
 import Effect.Exception (throw)
 import Fetch (fetch)
 import Fetch.Options (body, defaults, headers, method, url)
+import Foreign.Object (Object)
 import Foreign.Object as Object
 import Node.Process as Process
-import Prelude (add, bind, compose, const, join, map, pure, (<>))
+import Prelude (bind, compose, const, join, map, pure, (<>))
 
-type Tweet = {}
+type Tweet = { createdAt :: DateTime }
 type TwitterCredentials = { consumerKey :: String, consumerSecret :: String }
 type TwitterToken = { tokenType :: String, accessToken :: String }
 
@@ -65,7 +69,7 @@ getTweetCount dateTimeString = do
       (fetchTwitterToken credentials))
   token <- liftEffect (maybe (throw "no token") pure tokenMaybe)
   tweets <- map (compose join (map parseTweets)) (fetchTweets token)
-  pure (foldl add 0 (map (const 1) tweets))
+  pure (maybe 0 Array.length tweets)
 
 loadCredentials :: Effect (Maybe TwitterCredentials)
 loadCredentials = runMaybeT do
@@ -74,8 +78,30 @@ loadCredentials = runMaybeT do
   pure { consumerKey, consumerSecret }
 
 parseTweets :: String -> Maybe (Array Tweet)
-parseTweets _ = do
-  pure [] -- TODO
+parseTweets responseBody =
+  let
+    maybeFromEither :: forall a b. Either a b -> Maybe b
+    maybeFromEither = either (const Nothing) Just
+    toJson :: String -> Maybe Json
+    toJson = compose maybeFromEither jsonParser
+    toRecords :: Json -> Maybe (Array Tweet)
+    toRecords json = do
+      array <- Json.toArray json
+      objects <- traverse Json.toObject array
+      pure (Array.catMaybes (map toRecord objects))
+    toRecord :: Object Json -> Maybe Tweet
+    toRecord o = do
+      createdAtString <- bind (Object.lookup "created_at" o) Json.toString
+      createdAt <-
+        either
+          (const Nothing)
+          Just
+          (DateTimeFormat.parse
+            DateTimeFormat.twitterDateTimeFormat
+            createdAtString)
+      pure { createdAt }
+  in
+    bind (toJson responseBody) toRecords
 
 parseTwitterToken :: String -> Maybe TwitterToken
 parseTwitterToken responseBody =

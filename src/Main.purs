@@ -41,5 +41,4 @@ main = launchAff_ do
   commitCount <- getCommitCount dateTimeString
   _ <- liftEffect (logShow commitCount)
   tweetCount <- getTweetCount dateTimeString
-  _ <- liftEffect (logShow tweetCount)
   liftEffect (logShow tweetCount)
