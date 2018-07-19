@@ -23,7 +23,7 @@ import Fetch.Options (body, defaults, headers, method, url)
 import Foreign.Object (Object)
 import Foreign.Object as Object
 import Node.Process as Process
-import Prelude (bind, compose, const, identity, join, map, pure, (<>))
+import Prelude (bind, compose, const, join, map, pure, (<>))
 
 type Tweet = { createdAt :: DateTime }
 type TwitterCredentials = { consumerKey :: String, consumerSecret :: String }
