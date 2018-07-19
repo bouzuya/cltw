@@ -10,6 +10,7 @@ import Data.DateTime (DateTime)
 import Data.Either (Either, either)
 import Data.Maybe (Maybe(..), maybe)
 import Data.Options ((:=))
+import Data.Ord (lessThan)
 import Data.Traversable (traverse)
 import Data.Tuple (Tuple(..))
 import DateTimeFormat as DateTimeFormat
@@ -22,7 +23,7 @@ import Fetch.Options (body, defaults, headers, method, url)
 import Foreign.Object (Object)
 import Foreign.Object as Object
 import Node.Process as Process
-import Prelude (bind, compose, const, join, map, pure, (<>))
+import Prelude (bind, compose, const, identity, join, map, pure, (<>))
 
 type Tweet = { createdAt :: DateTime }
 type TwitterCredentials = { consumerKey :: String, consumerSecret :: String }
@@ -59,8 +60,8 @@ fetchTwitterToken { consumerKey, consumerSecret } = do
   pure response.body
 
 -- https://developer.twitter.com/en/docs/basics/authentication/overview/application-only
-getTweetCount :: String -> Aff Int
-getTweetCount dateTimeString = do
+getTweetCount :: DateTime -> Aff Int
+getTweetCount dateTime = do
   credentialsMaybe <- liftEffect loadCredentials
   credentials <- liftEffect (maybe (throw "no env") pure credentialsMaybe)
   tokenMaybe <-
@@ -68,8 +69,9 @@ getTweetCount dateTimeString = do
       (compose join (map parseTwitterToken))
       (fetchTwitterToken credentials))
   token <- liftEffect (maybe (throw "no token") pure tokenMaybe)
-  tweets <- map (compose join (map parseTweets)) (fetchTweets token)
-  pure (maybe 0 Array.length tweets)
+  tweetsMaybe <- map (compose join (map parseTweets)) (fetchTweets token)
+  tweets <- maybe (pure []) pure tweetsMaybe
+  pure (Array.length (Array.filter (compose (lessThan dateTime) _.createdAt) tweets))
 
 loadCredentials :: Effect (Maybe TwitterCredentials)
 loadCredentials = runMaybeT do
