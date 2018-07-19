@@ -5,6 +5,8 @@ import Control.Monad.Maybe.Trans (MaybeT(..), runMaybeT)
 import Data.Argonaut.Core (Json)
 import Data.Argonaut.Core as Json
 import Data.Argonaut.Parser (jsonParser)
+import Data.Array (foldl)
+import Data.Array as Array
 import Data.Either (Either, either)
 import Data.Maybe (Maybe(..), maybe)
 import Data.Options ((:=))
@@ -18,7 +20,7 @@ import Fetch (fetch)
 import Fetch.Options (body, defaults, headers, method, url)
 import Foreign.Object as Object
 import Node.Process as Process
-import Prelude (bind, compose, const, join, map, pure, (<>))
+import Prelude (add, bind, compose, const, join, map, pure, (<>))
 
 foreign import encodeBase64 :: String -> String
 
@@ -69,6 +71,12 @@ parseTwitterToken responseBody =
   in
     bind (toJson responseBody) toRecord
 
+type Tweet = {}
+
+parseTweets :: String -> Maybe (Array Tweet)
+parseTweets _ = do
+  pure [] -- TODO
+
 loadCredentials :: Effect (Maybe TwitterCredentials)
 loadCredentials = runMaybeT do
   consumerKey <- MaybeT (Process.lookupEnv "CLTW_TWITTER_CONSUMER_KEY")
@@ -85,6 +93,5 @@ getTweetCount dateTimeString = do
       (compose join (map parseTwitterToken))
       (fetchTwitterToken credentials))
   token <- liftEffect (maybe (throw "no token") pure tokenMaybe)
-  tweets <- fetchTweets token
-  _ <- liftEffect (logShow tweets)
-  pure 0
+  tweets <- map (compose join (map parseTweets)) (fetchTweets token)
+  pure (foldl add 0 (map (const 1) tweets))
