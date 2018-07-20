@@ -7,7 +7,6 @@ import Data.Foldable (intercalate)
 import Data.Maybe (fromJust)
 import Data.Time (Time(..))
 import Data.Time.Duration (Minutes(..))
-import DateTimeFormat (format, iso8601DateTimeFormatWithoutMilliseconds)
 import Effect (Effect)
 import Effect.Aff (launchAff_)
 import Effect.Class (liftEffect)
@@ -35,8 +34,7 @@ getToday = do
 main :: Effect Unit
 main = launchAff_ do
   today <- liftEffect getToday
-  let dateTimeString = format iso8601DateTimeFormatWithoutMilliseconds today
-  commitCount <- getCommitCount dateTimeString
+  commitCount <- getCommitCount today
   tweetCount <- getTweetCount today
   let
     message =

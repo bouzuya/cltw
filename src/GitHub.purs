@@ -6,11 +6,13 @@ import Data.Argonaut.Core as Json
 import Data.Argonaut.Parser (jsonParser)
 import Data.Array (foldl)
 import Data.Array as Array
+import Data.DateTime (DateTime)
 import Data.Either (Either, either)
 import Data.Maybe (Maybe(..), maybe)
 import Data.Options ((:=))
 import Data.Ord (lessThan, (>))
 import Data.Traversable (traverse)
+import DateTimeFormat as DateTimeFormat
 import Effect.Aff (Aff)
 import Effect.Class (liftEffect)
 import Effect.Exception (throw)
@@ -91,8 +93,13 @@ fetchFilteredRepos date = do
   let filter { language, pushedAt } = pushedAt > date && language == "PureScript"
   pure (Array.filter filter repos)
 
-getCommitCount :: String -> Aff Int
-getCommitCount dateTimeString = do
+getCommitCount :: DateTime -> Aff Int
+getCommitCount dateTime = do
+  let
+    dateTimeString =
+      DateTimeFormat.format
+        DateTimeFormat.iso8601DateTimeFormatWithoutMilliseconds
+        dateTime
   filteredRepos <- fetchFilteredRepos dateTimeString
   filteredCounts <- traverse (fetchFilteredCount dateTimeString) filteredRepos
   pure (foldl add 0 (map _.count filteredCounts))
