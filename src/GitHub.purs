@@ -25,15 +25,14 @@ import Prelude (add, bind, compose, const, join, map, pure, (&&), (<>), (==))
 type Repo =
   { fullName :: String
   , language :: String
-  , pushedAt :: String
+  , pushedAt :: DateTime
   }
 type RepoWithCount =
   { count :: Int
   , fullName :: String
   , language :: String
-  , pushedAt :: String
+  , pushedAt :: DateTime
   }
-
 
 fetchRepos :: Aff (Maybe String)
 fetchRepos = do
@@ -60,7 +59,14 @@ parseRepos responseBody =
     toRecord o = do
       fullName <- bind (Object.lookup "full_name" o) Json.toString
       language <- bind (Object.lookup "language" o) Json.toString
-      pushedAt <- bind (Object.lookup "pushed_at" o) Json.toString
+      pushedAtString <- bind (Object.lookup "pushed_at" o) Json.toString
+      pushedAt <-
+        either
+          (const Nothing)
+          Just
+          (DateTimeFormat.parse
+            DateTimeFormat.iso8601DateTimeFormatWithoutMilliseconds
+            pushedAtString)
       pure { fullName, language, pushedAt }
   in
     bind (toJson responseBody) toRecords
@@ -75,7 +81,7 @@ fetchCommits fullName = do
       )
   pure response.body
 
-fetchFilteredCount :: String -> Repo -> Aff RepoWithCount
+fetchFilteredCount :: DateTime -> Repo -> Aff RepoWithCount
 fetchFilteredCount date repo = do
   commitsMaybe <- (map (compose join (map parseCommits))) (fetchCommits repo.fullName)
   commits <- liftEffect (maybe (throw "no commits") pure commitsMaybe)
@@ -86,7 +92,7 @@ fetchFilteredCount date repo = do
     , pushedAt: repo.pushedAt
     }
 
-fetchFilteredRepos :: String -> Aff (Array Repo)
+fetchFilteredRepos :: DateTime -> Aff (Array Repo)
 fetchFilteredRepos date = do
   reposMaybe <- (map (compose join (map parseRepos)) fetchRepos)
   repos <- liftEffect (maybe (throw "no repos") pure reposMaybe)
@@ -95,31 +101,32 @@ fetchFilteredRepos date = do
 
 getCommitCount :: DateTime -> Aff Int
 getCommitCount dateTime = do
-  let
-    dateTimeString =
-      DateTimeFormat.format
-        DateTimeFormat.iso8601DateTimeFormatWithoutMilliseconds
-        dateTime
-  filteredRepos <- fetchFilteredRepos dateTimeString
-  filteredCounts <- traverse (fetchFilteredCount dateTimeString) filteredRepos
+  filteredRepos <- fetchFilteredRepos dateTime
+  filteredCounts <- traverse (fetchFilteredCount dateTime) filteredRepos
   pure (foldl add 0 (map _.count filteredCounts))
 
-parseCommits :: String -> Maybe (Array String)
+parseCommits :: String -> Maybe (Array DateTime)
 parseCommits responseBody =
   let
     maybeFromEither :: forall a b. Either a b -> Maybe b
     maybeFromEither = either (const Nothing) Just
     toJson :: String -> Maybe Json
     toJson = compose maybeFromEither jsonParser
-    toStrings :: Json -> Maybe (Array String)
+    toStrings :: Json -> Maybe (Array DateTime)
     toStrings json = do
       array <- Json.toArray json
       objects <- traverse Json.toObject array
       pure (Array.catMaybes (map toString objects))
-    toString :: Object Json -> Maybe String
+    toString :: Object Json -> Maybe DateTime
     toString o = do
       commit <- bind (Object.lookup "commit" o) Json.toObject
       author <- bind (Object.lookup "author" commit) Json.toObject
-      bind (Object.lookup "date" author) Json.toString
+      dateString <- bind (Object.lookup "date" author) Json.toString
+      either
+        (const Nothing)
+        Just
+        (DateTimeFormat.parse
+          DateTimeFormat.iso8601DateTimeFormatWithoutMilliseconds
+          dateString)
   in
     bind (toJson responseBody) toStrings
