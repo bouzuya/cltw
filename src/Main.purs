@@ -14,7 +14,7 @@ import Effect.Class.Console (log)
 import Effect.Now (nowDate)
 import GitHub (getCommitCount)
 import Partial.Unsafe (unsafePartial)
-import Prelude (Unit, bind, bottom, negate, pure, show, (*), (<>))
+import Prelude (Unit, bind, bottom, negate, pure, show, (*), (<), (<>), (==))
 import Twitter (getTweetCount)
 
 beginningOfDay :: Time
@@ -41,5 +41,6 @@ main = launchAff_ do
       intercalate "\n"
         [ "Commit Count: " <> (show commitCount)
         , "Tweet Count : " <> (show tweetCount)
+        , "Commit " <> (if commitCount < tweetCount then "<" else if commitCount == tweetCount then "=" else ">") <> "Tweet"
         ]
   liftEffect (log message)
