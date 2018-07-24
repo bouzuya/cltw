@@ -41,6 +41,6 @@ main = launchAff_ do
       intercalate "\n"
         [ "Commit Count: " <> (show commitCount)
         , "Tweet Count : " <> (show tweetCount)
-        , "Commit " <> (if commitCount < tweetCount then "<" else if commitCount == tweetCount then "=" else ">") <> "Tweet"
+        , "Commit " <> (if commitCount < tweetCount then "<" else if commitCount == tweetCount then "=" else ">") <> " Tweet"
         ]
   liftEffect (log message)
