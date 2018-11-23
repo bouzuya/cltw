@@ -7,8 +7,8 @@ import Data.Argonaut.Core as Json
 import Data.Argonaut.Parser (jsonParser)
 import Data.Array as Array
 import Data.DateTime (DateTime)
-import Data.Either (Either, either)
-import Data.Maybe (Maybe(..), maybe)
+import Data.Either (hush)
+import Data.Maybe (Maybe, maybe)
 import Data.Options ((:=))
 import Data.Ord (lessThan)
 import Data.Traversable (traverse)
@@ -82,10 +82,8 @@ loadCredentials = runMaybeT do
 parseTweets :: String -> Maybe (Array Tweet)
 parseTweets responseBody =
   let
-    maybeFromEither :: forall a b. Either a b -> Maybe b
-    maybeFromEither = either (const Nothing) Just
     toJson :: String -> Maybe Json
-    toJson = compose maybeFromEither jsonParser
+    toJson = compose hush jsonParser
     toRecords :: Json -> Maybe (Array Tweet)
     toRecords json = do
       array <- Json.toArray json
@@ -95,9 +93,7 @@ parseTweets responseBody =
     toRecord o = do
       createdAtString <- bind (Object.lookup "created_at" o) Json.toString
       createdAt <-
-        either
-          (const Nothing)
-          Just
+        hush
           (DateTimeFormat.parse
             DateTimeFormat.twitterDateTimeFormat
             createdAtString)
@@ -108,10 +104,8 @@ parseTweets responseBody =
 parseTwitterToken :: String -> Maybe TwitterToken
 parseTwitterToken responseBody =
   let
-    maybeFromEither :: forall a b. Either a b -> Maybe b
-    maybeFromEither = either (const Nothing) Just
     toJson :: String -> Maybe Json
-    toJson = compose maybeFromEither jsonParser
+    toJson = compose hush jsonParser
     toRecord :: Json -> Maybe TwitterToken
     toRecord json = do
       o <- Json.toObject json

@@ -7,8 +7,8 @@ import Data.Argonaut.Parser (jsonParser)
 import Data.Array (foldl)
 import Data.Array as Array
 import Data.DateTime (DateTime)
-import Data.Either (Either, either)
-import Data.Maybe (Maybe(..), maybe)
+import Data.Either (hush)
+import Data.Maybe (Maybe, maybe)
 import Data.Options ((:=))
 import Data.Ord (lessThan, (>))
 import Data.Traversable (traverse)
@@ -20,7 +20,7 @@ import Fetch (fetch)
 import Fetch.Options (defaults, method, url)
 import Foreign.Object (Object)
 import Foreign.Object as Object
-import Prelude (add, bind, compose, const, join, map, pure, (&&), (<>), (==))
+import Prelude (add, bind, compose, join, map, pure, (&&), (<>), (==))
 
 type Repo =
   { fullName :: String
@@ -46,10 +46,8 @@ fetchRepos = do
 parseRepos :: String -> Maybe (Array Repo)
 parseRepos responseBody =
   let
-    maybeFromEither :: forall a b. Either a b -> Maybe b
-    maybeFromEither = either (const Nothing) Just
     toJson :: String -> Maybe Json
-    toJson = compose maybeFromEither jsonParser
+    toJson = compose hush jsonParser
     toRecords :: Json -> Maybe (Array Repo)
     toRecords json = do
       array <- Json.toArray json
@@ -61,9 +59,7 @@ parseRepos responseBody =
       language <- bind (Object.lookup "language" o) Json.toString
       pushedAtString <- bind (Object.lookup "pushed_at" o) Json.toString
       pushedAt <-
-        either
-          (const Nothing)
-          Just
+        hush
           (DateTimeFormat.parse
             DateTimeFormat.iso8601DateTimeFormatWithoutMilliseconds
             pushedAtString)
@@ -108,10 +104,8 @@ getCommitCount dateTime = do
 parseCommits :: String -> Maybe (Array DateTime)
 parseCommits responseBody =
   let
-    maybeFromEither :: forall a b. Either a b -> Maybe b
-    maybeFromEither = either (const Nothing) Just
     toJson :: String -> Maybe Json
-    toJson = compose maybeFromEither jsonParser
+    toJson = compose hush jsonParser
     toStrings :: Json -> Maybe (Array DateTime)
     toStrings json = do
       array <- Json.toArray json
@@ -122,9 +116,7 @@ parseCommits responseBody =
       commit <- bind (Object.lookup "commit" o) Json.toObject
       author <- bind (Object.lookup "author" commit) Json.toObject
       dateString <- bind (Object.lookup "date" author) Json.toString
-      either
-        (const Nothing)
-        Just
+      hush
         (DateTimeFormat.parse
           DateTimeFormat.iso8601DateTimeFormatWithoutMilliseconds
           dateString)
